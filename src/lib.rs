@@ -73,7 +73,7 @@ impl VirtualMachine {
                 19  => self.write(),
                 20  => self.read(),
                 21  => Ok(()),
-                _ => Err(String::from("Not implemented yet.")),
+                _ => Err(String::from("Invalid opcode.")),
             };
         }
 
