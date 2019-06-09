@@ -125,6 +125,13 @@ impl VirtualMachine {
         instruction
     }
 
+    fn get_value(&self, i: Instruction) -> u16 {
+        match i {
+            Instruction::Register(x) => self.registers[x as usize],
+            Instruction::Value(x) => x,
+        }
+    }
+
     // Halt execution (not really an error, but simpler this way.)
     fn halt(&mut self) -> Result<(), VirtualMachineError> {
         Err(VirtualMachineError::HaltExecution)
@@ -133,10 +140,7 @@ impl VirtualMachine {
     // Set register 'a' to the value 'b' (or value in register 'b').
     fn set(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = b;
         Ok(())
@@ -144,10 +148,7 @@ impl VirtualMachine {
 
     // Push value of register 'a' onto the stack.
     fn push(&mut self) -> Result<(), VirtualMachineError> {
-        let a = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let a = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.stack.push(a);
         Ok(())
@@ -165,16 +166,8 @@ impl VirtualMachine {
     // Set register 'a' to 1 if 'b' == 'c'. 0 otherwise.
     fn eq(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let c = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
+        let c = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = u16::from(b == c);
         Ok(())
@@ -183,16 +176,8 @@ impl VirtualMachine {
     // Set register 'a' to 1 if 'b' > 'c'. 0 otherwise.
     fn gt(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let c = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
+        let c = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = u16::from(b > c);
         Ok(())
@@ -200,10 +185,7 @@ impl VirtualMachine {
 
     // Jump to instruction 'a' (value or register).
     fn jmp(&mut self) -> Result<(), VirtualMachineError> {
-        let a = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let a = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.instruction_pointer = a;
         Ok(())
@@ -211,15 +193,8 @@ impl VirtualMachine {
 
     // If 'a' != 0, jump to instruction 'b' (value or register).
     fn jt(&mut self) -> Result<(), VirtualMachineError> {
-        let a = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let a = self.read_instruction().map(|i| self.get_value(i))?;
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
 
         if a != 0 { self.instruction_pointer = b }
         Ok(())
@@ -227,15 +202,8 @@ impl VirtualMachine {
 
     // If 'a' == 0, jump to instruction 'b' (value or register).
     fn jf(&mut self) -> Result<(), VirtualMachineError> {
-        let a = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let a = self.read_instruction().map(|i| self.get_value(i))?;
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
 
         if a == 0 { self.instruction_pointer = b }
         Ok(())
@@ -244,16 +212,8 @@ impl VirtualMachine {
     // Assign into register 'a' the sum of 'b' and 'c' (modulo 32768).
     fn add(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let c = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
+        let c = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = b.wrapping_add(c) % MODULO;
         Ok(())
@@ -262,16 +222,8 @@ impl VirtualMachine {
     // Assign into register 'a' the product of 'b' and 'c' (modulo 32768).
     fn mult(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let c = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
+        let c = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = b.wrapping_mul(c) % MODULO;
         Ok(())
@@ -282,16 +234,8 @@ impl VirtualMachine {
     // homogeneity of the code.
     fn rem(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let c = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
+        let c = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = b.wrapping_rem(c);
         Ok(())
@@ -300,16 +244,8 @@ impl VirtualMachine {
     // Assign into register 'a' the bitwise and of 'b' and 'c'.
     fn and(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let c = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
+        let c = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = b & c;
         Ok(())
@@ -318,16 +254,8 @@ impl VirtualMachine {
     // Assign into register 'a' the bitwise or of 'b' and 'c'.
     fn or(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let c = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
+        let c = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = b | c;
         Ok(())
@@ -336,11 +264,7 @@ impl VirtualMachine {
     // Assign into register 'a' the 15-bit bitwise inverse of 'b'.
     fn not(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
 
         // Only operate on 15 bits, not the 16th.
         self.registers[a as usize] = b ^ 32767_u16;
@@ -350,11 +274,7 @@ impl VirtualMachine {
     // Read memory at address 'b' and write to register 'a'.
     fn rmem(&mut self) -> Result<(), VirtualMachineError> {
         let a = self.read_instruction()?.register_value()?;
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.registers[a as usize] = self.memory[b as usize];
         Ok(())
@@ -362,15 +282,8 @@ impl VirtualMachine {
 
     // Write the value from 'b' to memory at address 'a'.
     fn wmem(&mut self) -> Result<(), VirtualMachineError> {
-        let a = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
-
-        let b = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let a = self.read_instruction().map(|i| self.get_value(i))?;
+        let b = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.memory[a as usize] = b;
         Ok(())
@@ -378,10 +291,7 @@ impl VirtualMachine {
 
     // Push the next instruction's address to the stack and jump to 'a'.
     fn call(&mut self) -> Result<(), VirtualMachineError> {
-        let a = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        };
+        let a = self.read_instruction().map(|i| self.get_value(i))?;
 
         self.stack.push(self.instruction_pointer);
         self.instruction_pointer = a;
@@ -397,10 +307,7 @@ impl VirtualMachine {
 
     // Write the character with the value 'a' (or register 'a') to stdout.
     fn write(&mut self) -> Result<(), VirtualMachineError> {
-        let a = match self.read_instruction()? {
-            Instruction::Register(x) => self.registers[x as usize],
-            Instruction::Value(x) => x,
-        } as u8;
+        let a = self.read_instruction().map(|i| self.get_value(i))? as u8;
 
         let _ = io::stdout().write(&[a]);
         Ok(())
